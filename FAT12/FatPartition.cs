@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace FAT12
@@ -121,35 +122,51 @@ namespace FAT12
         {
             using (var BR = new BinaryReader(S, Encoding.Default, true))
             {
+                //Read the first Sector
                 _bootJumpInstructions = BR.ReadBytes(3);
                 _oemName = Encoding.Default.GetString(BR.ReadBytes(8)).TrimEnd();
                 _biosParameters = new BiosParameterBlock(S);
                 _extendedBiosParameters = new ExtendedBiosParameterBlock(S);
                 _bootCode = BR.ReadBytes(448);
                 _bootSectorSignature = BR.ReadBytes(2);
-                _clusterMap = new ClusterStatus[_biosParameters.BytesPerSector * _biosParameters.SectorsPerFat / 3];
-                for (var i = 0; i < _clusterMap.Length; i += 2)
+
+                //Read the FAT12 Entry
+                using (var MS = new MemoryStream(BR.ReadBytes(_biosParameters.BytesPerSector * _biosParameters.SectorsPerFat)))
                 {
-                    var Clusters = BR.ReadBytes(3);
-                    //Swap nibbles of byte array
-                    Clusters[1] = (byte)((Clusters[1] << 4) + (Clusters[1] >> 4));
-
-                    if (i > 1500)
+                    using (var MR = new BinaryReader(MS))
                     {
-                        Console.Write("");
+                        _clusterMap = new ClusterStatus[_biosParameters.BytesPerSector * _biosParameters.SectorsPerFat / 3];
+                        for (var i = 0; i < _clusterMap.Length; i += 2)
+                        {
+                            var Clusters = MR.ReadBytes(3);
+                            //Swap nibbles of byte array
+                            Clusters[1] = (byte)((Clusters[1] << 4) + (Clusters[1] >> 4));
+
+                            if (i > 1500)
+                            {
+                                Console.Write("");
+                            }
+
+                            ushort Cluster1 = (ushort)(Clusters[0] + ((Clusters[1] >> 4) * 256));
+                            ushort Cluster2 = (ushort)((Clusters[2] << 4) + (Clusters[1] & 0xF));
+
+                            _clusterMap[i] = GetFat12Status(Cluster1);
+                            _clusterMap[i + 1] = GetFat12Status(Cluster2);
+                        }
+                        _clusterMap[0] = _clusterMap[1] = ClusterStatus.Reserved;
                     }
-
-                    ushort Cluster1 = (ushort)(Clusters[0] + ((Clusters[1] >> 4) * 256));
-                    ushort Cluster2 = (ushort)((Clusters[2] << 4) + (Clusters[1] & 0xF));
-
-                    _clusterMap[i] = GetStatus(Cluster1);
-                    _clusterMap[i + 1] = GetStatus(Cluster2);
                 }
-                _clusterMap[0] = _clusterMap[1] = ClusterStatus.Reserved;
+                //Skip all other FAT tables
+                for (var i = 0; i < _biosParameters.NumberOfFatTables - 1; i++)
+                {
+                    BR.ReadBytes(_biosParameters.BytesPerSector * _biosParameters.SectorsPerFat);
+                }
+                //Root Directory
+                Enumerable.Range(0, _biosParameters.NumberOfRootEntries).Select(m => new FatDirectoryEntry(BR.ReadBytes(FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY))).ToArray();
             }
         }
 
-        private ClusterStatus GetStatus(ushort u)
+        private ClusterStatus GetFat12Status(ushort u)
         {
             if (u == 0)
             {
@@ -170,6 +187,5 @@ namespace FAT12
             //End of file marker otherwise
             return ClusterStatus.EOF;
         }
-
     }
 }

@@ -47,6 +47,7 @@
     <Compile Include="Cluster.cs" />
     <Compile Include="ClusterStatus.cs" />
     <Compile Include="ExtendedBiosParameterBlock.cs" />
+    <Compile Include="FatDirectoryEntry.cs" />
     <Compile Include="FatPartition.cs" />
     <Compile Include="FatReader.cs" />
     <Compile Include="Program.cs" />
