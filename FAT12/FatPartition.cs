@@ -189,6 +189,13 @@ namespace FAT12
             }
         }
 
+        public int CalculateOffset(ushort Cluster)
+        {
+            return _biosParameters.SectorsPerCluster * _biosParameters.BytesPerSector * (Cluster - 1) +
+                _biosParameters.NumberOfFatTables * _biosParameters.SectorsPerFat * _biosParameters.BytesPerSector +
+                _biosParameters.NumberOfRootEntries * FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY;
+        }
+
         public byte[] ReadClusters(ushort[] ClusterChain, Stream FATStream)
         {
             int BlockSize = _biosParameters.SectorsPerCluster * _biosParameters.BytesPerSector;
@@ -197,19 +204,17 @@ namespace FAT12
             {
                 foreach (var Cluster in ClusterChain)
                 {
-                    FATStream.Seek(
-                        //Specified cluster
-                        BlockSize * (Cluster - 1) +
-                        //FAT Tables Offset
-                        _biosParameters.NumberOfFatTables * _biosParameters.SectorsPerFat * _biosParameters.BytesPerSector +
-                        //Root Directory Offset
-                        _biosParameters.NumberOfRootEntries * FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY,
-                        SeekOrigin.Begin);
+                    FATStream.Seek(CalculateOffset(Cluster), SeekOrigin.Begin);
                     FATStream.Read(Data, 0, Data.Length);
                     MS.Write(Data, 0, Data.Length);
                 }
                 return MS.ToArray();
             }
+        }
+
+        public byte[] ReadFile(ushort[] ClusterChain, int FileSize, Stream FATStream)
+        {
+            return ReadClusters(ClusterChain, FATStream).Take(FileSize).ToArray();
         }
 
         public static FatDirectoryEntry[] ReadDirectory(byte[] RawDirectory)

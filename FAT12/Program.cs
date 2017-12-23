@@ -17,7 +17,7 @@ namespace FAT12
                 ShowMapUnscaled(FAT.ClusterMap.Select(m => m.Status).ToArray());
 
                 var chain = FAT.GetClusterChain(178);
-                var Data = Encoding.Default.GetString(FAT.ReadClusters(chain, FS));
+                var Data = Encoding.Default.GetString(FAT.ReadFile(chain, 336710, FS));
                 Console.WriteLine(Data);
 
                 ShowDirectory(FAT.RootDirectory, FAT, FS);
