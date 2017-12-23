@@ -15,6 +15,10 @@ namespace FAT12
         private ushort _modifyDate;
         private ushort _modifyTime;
 
+        /// <summary>
+        /// Gets or Sets the 8 char File name Entry
+        /// </summary>
+        /// <remarks>Trimmed Spaces</remarks>
         public string FileName
         {
             get
@@ -38,6 +42,10 @@ namespace FAT12
                 _fileName = value.ToUpper().PadRight(FatConstants.FAT_DIRECTORY_FILENAME_LENGTH);
             }
         }
+        /// <summary>
+        /// Gets or Sets the 3 char File name Extension of the Entry
+        /// </summary>
+        /// <remarks>Trimmed Spaces</remarks>
         public string Extension
         {
             get
@@ -57,6 +65,10 @@ namespace FAT12
                 _fileExt = value.ToUpper().PadRight(FatConstants.FAT_DIRECTORY_FILEEXT_LENGTH);
             }
         }
+        /// <summary>
+        /// Gets the Full name of this Entry
+        /// </summary>
+        /// <remarks>Trimmed Spaces</remarks>
         public string FullName
         {
             get
@@ -68,6 +80,10 @@ namespace FAT12
                 return _fileName.Trim();
             }
         }
+        /// <summary>
+        /// Gets or Sets the Status of this Entry
+        /// </summary>
+        /// <remarks><see cref="DirectoryEntryStatus.InUse"/> must be set by setting the first char of the Entry properly.</remarks>
         public DirectoryEntryStatus EntryStatus
         {
             get
@@ -101,12 +117,33 @@ namespace FAT12
                 _fileName = new string(Name);
             }
         }
+        /// <summary>
+        /// Attributes of the Entry
+        /// </summary>
         public DirectoryEntryAttribute Attributes;
+        /// <summary>
+        /// Additional Attributes
+        /// </summary>
+        /// <remarks>Only in use by some Operating Systems</remarks>
         public byte AdditionalAttributes;
+        /// <summary>
+        /// The Fine Resolution (x*10 ms) of the Create Time.
+        /// The First char of the Name if the File was deleted.
+        /// </summary>
         public byte UndeleteCharOrCreateFineResolution;
+        /// <summary>
+        /// First Cluster of the File
+        /// </summary>
+        /// <remarks>In Combination with the Clustermap, allows to read the file</remarks>
         public ushort FirstCluster;
+        /// <summary>
+        /// Size in bytes of the File
+        /// </summary>
         public uint FileSize;
 
+        /// <summary>
+        /// Gets the Create Time
+        /// </summary>
         public TimeSpan CreateTime
         {
             get
@@ -117,6 +154,9 @@ namespace FAT12
             {
             }
         }
+        /// <summary>
+        /// Gets the Create Date
+        /// </summary>
         public DateTime CreateDate
         {
             get
@@ -124,6 +164,9 @@ namespace FAT12
                 return ParseDate(_createDate);
             }
         }
+        /// <summary>
+        /// Gets the Modify Time
+        /// </summary>
         public TimeSpan ModifyTime
         {
             get
@@ -134,6 +177,9 @@ namespace FAT12
             {
             }
         }
+        /// <summary>
+        /// Gets the Modify Date
+        /// </summary>
         public DateTime ModifyDate
         {
             get
@@ -141,7 +187,9 @@ namespace FAT12
                 return ParseDate(_modifyDate);
             }
         }
-
+        /// <summary>
+        /// Extended Attributes used by some OS
+        /// </summary>
         public ushort ExtendedAttributes;
 
         public FatDirectoryEntry(byte[] Entry)
@@ -188,6 +236,11 @@ namespace FAT12
             return FileNameSegment != null && FileNameSegment.ToCharArray().All(m => FatConstants.VALID_FAT_NAME_CHARS.Contains(m));
         }
 
+        /// <summary>
+        /// Parses a Date Component of a Directory Entry in a DateTime Structure
+        /// </summary>
+        /// <param name="Date">Date Component</param>
+        /// <returns>DateTime Structure</returns>
         public static DateTime ParseDate(ushort Date)
         {
             if (Date == 0)
@@ -201,6 +254,11 @@ namespace FAT12
             return new DateTime(1980 + Years, Months, Days, 0, 0, 0, DateTimeKind.Local);
         }
 
+        /// <summary>
+        /// Parses a Time Component of a Directory Entry in a TimeSpan Structure
+        /// </summary>
+        /// <param name="Timestamp">Time Component</param>
+        /// <returns>TimeSpan Structure</returns>
         public static TimeSpan ParseTimestamp(ushort Timestamp)
         {
             //Bitmap: hhhhhmmmmmmsssss

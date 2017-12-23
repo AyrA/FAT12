@@ -3,19 +3,73 @@ using System.Text;
 
 namespace FAT12
 {
+    /// <summary>
+    /// The Part of the Bootsector named the Bios Parameters
+    /// </summary>
     public class BiosParameterBlock
     {
+        /// <summary>
+        /// Bytes per Sector
+        /// </summary>
+        /// <remarks>For most disks in use in the United States, the value of this field is 512.</remarks>
         public ushort BytesPerSector;
+        /// <summary>
+        /// Sectors per Clusters
+        /// </summary>
+        /// <remarks>This is usually 1 but not necessarily</remarks>
         public byte SectorsPerCluster;
+        /// <summary>
+        /// The number of sectors from the Partition Boot Sector to the start of the first file allocation table,
+        /// including the Partition Boot Sector.
+        /// </summary>
+        /// <remarks>Because this Value includes the Boot Sector, it has to be at least 1</remarks>
         public ushort ReservedSectors;
+        /// <summary>
+        /// Number of Cluster Maps
+        /// </summary>
+        /// <remarks>Typically, the value of this field is 2.</remarks>
         public byte NumberOfFatTables;
+        /// <summary>
+        /// Number of Entries in the Root Directory
+        /// </summary>
         public ushort NumberOfRootEntries;
+        /// <summary>
+        /// Number of Sectors on Disk. If 0, use <see cref="LargeSectors"/> instead
+        /// </summary>
         public ushort SmallSectors;
+        /// <summary>
+        /// Type of Media
+        /// </summary>
+        /// <remarks>A value of 0xF8 indicates a hard disk.</remarks>
         public byte MediaType;
+        /// <summary>
+        /// Sectors in each FAT
+        /// </summary>
+        /// <remarks>
+        /// Number of sectors occupied by each of the file allocation tables on the volume.
+        /// By using this information, together with the Number of FATs and Reserved Sectors,
+        /// you can compute where the root folder begins.
+        /// By using the number of entries in the root folder,
+        /// you can also compute where the user data area of the volume begins.
+        /// </remarks>
         public ushort SectorsPerFat;
+        /// <summary>
+        /// Sectors in each Track
+        /// </summary>
         public ushort SectorsPerTrack;
+        /// <summary>
+        /// Number of Heads (Sides)
+        /// </summary>
         public ushort NumberOfHeads;
+        /// <summary>
+        /// Same as the Relative Sector field in the Partition Table.
+        /// </summary>
         public uint HiddenSectors;
+        /// <summary>
+        /// If the <see cref="SmallSectors"/> field is zero,
+        /// this field contains the total number of sectors in the volume.
+        /// If Small Sectors is nonzero, this field contains zero.
+        /// </summary>
         public uint LargeSectors;
 
         public BiosParameterBlock(Stream S)
