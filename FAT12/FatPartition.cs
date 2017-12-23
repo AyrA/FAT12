@@ -184,7 +184,7 @@ namespace FAT12
                     BR.ReadBytes(_biosParameters.BytesPerSector * _biosParameters.SectorsPerFat);
                 }
                 //Root Directory
-                _rootDirectory = ReadDirectory(BR.ReadBytes(FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY * _biosParameters.NumberOfRootEntries));
+                _rootDirectory = ReadDirectory(BR.ReadBytes(FatConstants.FAT_BYTES_PER_DIRECTORY_ENTRY * _biosParameters.NumberOfRootEntries));
                 //Enumerable.Range(0, _biosParameters.NumberOfRootEntries).Select(m => new FatDirectoryEntry(BR.ReadBytes(FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY))).ToArray();
             }
         }
@@ -193,7 +193,7 @@ namespace FAT12
         {
             return _biosParameters.SectorsPerCluster * _biosParameters.BytesPerSector * (Cluster - 1) +
                 _biosParameters.NumberOfFatTables * _biosParameters.SectorsPerFat * _biosParameters.BytesPerSector +
-                _biosParameters.NumberOfRootEntries * FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY;
+                _biosParameters.NumberOfRootEntries * FatConstants.FAT_BYTES_PER_DIRECTORY_ENTRY;
         }
 
         public byte[] ReadClusters(ushort[] ClusterChain, Stream FATStream)
@@ -223,7 +223,7 @@ namespace FAT12
             {
                 using (var BR = new BinaryReader(MS))
                 {
-                    return Enumerable.Range(0, RawDirectory.Length / FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY).Select(m => new FatDirectoryEntry(BR.ReadBytes(FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY))).ToArray();
+                    return Enumerable.Range(0, RawDirectory.Length / FatConstants.FAT_BYTES_PER_DIRECTORY_ENTRY).Select(m => new FatDirectoryEntry(BR.ReadBytes(FatConstants.FAT_BYTES_PER_DIRECTORY_ENTRY))).ToArray();
                 }
             }
         }

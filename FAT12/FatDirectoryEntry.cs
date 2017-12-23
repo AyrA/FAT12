@@ -31,11 +31,11 @@ namespace FAT12
                 {
                     throw new ArgumentException("File name can't be exclusively made up of whitespace");
                 }
-                if (Encoding.Default.GetByteCount(value) > FatReader.FAT_DIRECTORY_FILENAME_LENGTH)
+                if (Encoding.Default.GetByteCount(value) > FatConstants.FAT_DIRECTORY_FILENAME_LENGTH)
                 {
                     throw new FormatException("File name can't be longer than 8 chars");
                 }
-                _fileName = value.ToUpper().PadRight(FatReader.FAT_DIRECTORY_FILENAME_LENGTH);
+                _fileName = value.ToUpper().PadRight(FatConstants.FAT_DIRECTORY_FILENAME_LENGTH);
             }
         }
         public string Extension
@@ -50,18 +50,22 @@ namespace FAT12
                 {
                     throw new ArgumentNullException("FileName");
                 }
-                if (Encoding.Default.GetByteCount(value) > FatReader.FAT_DIRECTORY_FILEEXT_LENGTH)
+                if (Encoding.Default.GetByteCount(value) > FatConstants.FAT_DIRECTORY_FILEEXT_LENGTH)
                 {
                     throw new FormatException("File extension can't be longer than 3 chars");
                 }
-                _fileExt = value.ToUpper().PadRight(FatReader.FAT_DIRECTORY_FILEEXT_LENGTH);
+                _fileExt = value.ToUpper().PadRight(FatConstants.FAT_DIRECTORY_FILEEXT_LENGTH);
             }
         }
         public string FullName
         {
             get
             {
-                return FileName + "." + Extension;
+                if (_fileExt.Trim().Length > 0)
+                {
+                    return string.Format("{0}.{1}", _fileName.Trim(), _fileExt.Trim());
+                }
+                return _fileName.Trim();
             }
         }
         public DirectoryEntryStatus EntryStatus
@@ -146,14 +150,14 @@ namespace FAT12
             {
                 throw new ArgumentNullException("FileName");
             }
-            if (Entry.Length != FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY)
+            if (Entry.Length != FatConstants.FAT_BYTES_PER_DIRECTORY_ENTRY)
             {
-                throw new ArgumentOutOfRangeException($"Entry must be {FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY} bytes in Length");
+                throw new ArgumentOutOfRangeException($"Entry must be {FatConstants.FAT_BYTES_PER_DIRECTORY_ENTRY} bytes in Length");
             }
             using (var BR = new BinaryReader(new MemoryStream(Entry, false)))
             {
-                _fileName = Encoding.Default.GetString(BR.ReadBytes(FatReader.FAT_DIRECTORY_FILENAME_LENGTH));
-                _fileExt = Encoding.Default.GetString(BR.ReadBytes(FatReader.FAT_DIRECTORY_FILEEXT_LENGTH));
+                _fileName = Encoding.Default.GetString(BR.ReadBytes(FatConstants.FAT_DIRECTORY_FILENAME_LENGTH));
+                _fileExt = Encoding.Default.GetString(BR.ReadBytes(FatConstants.FAT_DIRECTORY_FILEEXT_LENGTH));
                 Attributes = (DirectoryEntryAttribute)BR.ReadByte();
                 AdditionalAttributes = BR.ReadByte();
                 UndeleteCharOrCreateFineResolution = BR.ReadByte();
@@ -181,7 +185,7 @@ namespace FAT12
         /// <returns>true, if valid chars used only</returns>
         public static bool IsValidFileName(string FileNameSegment)
         {
-            return FileNameSegment != null && FileNameSegment.ToCharArray().All(m => FatReader.VALID_FAT_NAME_CHARS.Contains(m));
+            return FileNameSegment != null && FileNameSegment.ToCharArray().All(m => FatConstants.VALID_FAT_NAME_CHARS.Contains(m));
         }
 
         public static DateTime ParseDate(ushort Date)
