@@ -23,6 +23,10 @@ namespace FAT12
                 //*/
 
                 Console.WriteLine("TYPE={0}; LABEL={1}", FAT.ExtendedBiosParameters.SystemID, FAT.ExtendedBiosParameters.VolumeLabel);
+                foreach (var Entry in FAT.RootDirectory.Where(m => m.EntryStatus == DirectoryEntryStatus.InUse))
+                {
+                    Console.WriteLine("NAME={0,-12} TYPE={1,-15} SIZE={2,-10} START={3}", Entry.FullName, Entry.Attributes, Entry.FileSize, Entry.FirstCluster);
+                }
             }
 #if DEBUG
             Console.Error.WriteLine("#END");

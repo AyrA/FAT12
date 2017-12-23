@@ -9,7 +9,11 @@ namespace FAT12
     {
         private string _fileName;
         private string _fileExt;
-        private ulong _createTime;
+        private ushort _createTime;
+        private ushort _createDate;
+        private ushort _accessDate;
+        private ushort _modifyDate;
+        private ushort _modifyTime;
 
         public string FileName
         {
@@ -96,6 +100,9 @@ namespace FAT12
         public DirectoryEntryAttribute Attributes;
         public byte AdditionalAttributes;
         public byte UndeleteCharOrCreateFineResolution;
+        public ushort FirstCluster;
+        public uint FileSize;
+
         public TimeSpan CreateTime
         {
             get
@@ -106,6 +113,32 @@ namespace FAT12
             {
             }
         }
+        public DateTime CreateDate
+        {
+            get
+            {
+                return ParseDate(_createDate);
+            }
+        }
+        public TimeSpan ModifyTime
+        {
+            get
+            {
+                return ParseTimestamp(_modifyTime);
+            }
+            set
+            {
+            }
+        }
+        public DateTime ModifyDate
+        {
+            get
+            {
+                return ParseDate(_modifyDate);
+            }
+        }
+
+        public ushort ExtendedAttributes;
 
         public FatDirectoryEntry(byte[] Entry)
         {
@@ -124,7 +157,19 @@ namespace FAT12
                 Attributes = (DirectoryEntryAttribute)BR.ReadByte();
                 AdditionalAttributes = BR.ReadByte();
                 UndeleteCharOrCreateFineResolution = BR.ReadByte();
+
                 _createTime = BR.ReadUInt16();
+                _createDate = BR.ReadUInt16();
+
+                _accessDate = BR.ReadUInt16();
+
+                ExtendedAttributes = BR.ReadUInt16();
+
+                _modifyTime = BR.ReadUInt16();
+                _modifyDate = BR.ReadUInt16();
+
+                FirstCluster = BR.ReadUInt16();
+                FileSize = BR.ReadUInt32();
             }
         }
 
@@ -139,12 +184,25 @@ namespace FAT12
             return FileNameSegment != null && FileNameSegment.ToCharArray().All(m => FatReader.VALID_FAT_NAME_CHARS.Contains(m));
         }
 
-        public static TimeSpan ParseTimestamp(ulong Timestamp)
+        public static DateTime ParseDate(ushort Date)
+        {
+            if (Date == 0)
+            {
+                return DateTime.MinValue;
+            }
+            //Bitmap: yyyyyyymmmmddddd
+            var Days = Date & 0x1F;
+            var Months = (Date >> 5) & 0xF;
+            var Years = Date >> 9;
+            return new DateTime(1980 + Years, Months, Days, 0, 0, 0, DateTimeKind.Local);
+        }
+
+        public static TimeSpan ParseTimestamp(ushort Timestamp)
         {
             //Bitmap: hhhhhmmmmmmsssss
             var seconds = (Timestamp & 0x1F) / 2;
             var minutes = (Timestamp >> 5) & 0x7e0;
-            var hours = (Timestamp >> 11) & 0x1F;
+            var hours = Timestamp >> 11;
             return TimeSpan.FromSeconds(seconds + minutes * 60 + hours * 3600);
         }
     }

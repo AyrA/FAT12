@@ -29,6 +29,7 @@ namespace FAT12
         private byte[] _bootCode;
         private byte[] _bootSectorSignature;
         private ClusterStatus[] _clusterMap;
+        private FatDirectoryEntry[] _rootDirectory;
 
         public byte[] BootJumpInstructions
         {
@@ -117,6 +118,25 @@ namespace FAT12
                 _clusterMap = (ClusterStatus[])value.Clone();
             }
         }
+        public FatDirectoryEntry[] RootDirectory
+        {
+            get
+            {
+                return (FatDirectoryEntry[])_rootDirectory.Clone();
+            }
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException("RootDirectory");
+                }
+                if (value.Length != _rootDirectory.Length)
+                {
+                    throw new FormatException($"Root Directory must have {_clusterMap.Length} entries");
+                }
+                _rootDirectory = (FatDirectoryEntry[])value.Clone();
+            }
+        }
 
         public FatPartition(Stream S)
         {
@@ -162,7 +182,7 @@ namespace FAT12
                     BR.ReadBytes(_biosParameters.BytesPerSector * _biosParameters.SectorsPerFat);
                 }
                 //Root Directory
-                Enumerable.Range(0, _biosParameters.NumberOfRootEntries).Select(m => new FatDirectoryEntry(BR.ReadBytes(FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY))).ToArray();
+                _rootDirectory = Enumerable.Range(0, _biosParameters.NumberOfRootEntries).Select(m => new FatDirectoryEntry(BR.ReadBytes(FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY))).ToArray();
             }
         }
 
