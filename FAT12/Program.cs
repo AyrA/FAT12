@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace FAT12
 {
@@ -13,26 +14,33 @@ namespace FAT12
             {
                 var FAT = new FatPartition(FS);
 
-                ShowMapUnscaled(FAT.ClusterMap);
+                ShowMapUnscaled(FAT.ClusterMap.Select(m => m.Status).ToArray());
 
-                /*
-                using (var BMP = DrawMap(FAT.ClusterMap, 20))
-                {
-                    BMP.Save(@"C:\temp\diskmap.png");
-                }
-                //*/
+                var chain = FAT.GetClusterChain(178);
+                var Data = Encoding.Default.GetString(FAT.ReadClusters(chain, FS));
+                Console.WriteLine(Data);
 
-                Console.WriteLine("TYPE={0}; LABEL={1}", FAT.ExtendedBiosParameters.SystemID, FAT.ExtendedBiosParameters.VolumeLabel);
-                foreach (var Entry in FAT.RootDirectory.Where(m => m.EntryStatus == DirectoryEntryStatus.InUse))
-                {
-                    Console.WriteLine("NAME={0,-12} TYPE={1,-15} SIZE={2,-10} START={3}", Entry.FullName, Entry.Attributes, Entry.FileSize, Entry.FirstCluster);
-                }
+                ShowDirectory(FAT.RootDirectory, FAT, FS);
             }
 #if DEBUG
             Console.Error.WriteLine("#END");
             while (Console.KeyAvailable) { Console.ReadKey(true); }
             Console.ReadKey(true);
 #endif
+        }
+
+        private static void ShowDirectory(FatDirectoryEntry[] Entries, FatPartition FAT, Stream FATStream, string Parent = "")
+        {
+            Console.WriteLine("Directory: {0}", string.IsNullOrEmpty(Parent) ? "\\" : Parent);
+            foreach (var Entry in Entries.Where(m => m.EntryStatus == DirectoryEntryStatus.InUse))
+            {
+                Console.WriteLine("NAME={0,-12} TYPE={1,-15} SIZE={2,-10} START={3}", Entry.FullName, Entry.Attributes, Entry.FileSize, Entry.FirstCluster);
+                if (Entry.Attributes.HasFlag(DirectoryEntryAttribute.Directory) && Entry.FullName != ".." && Entry.FullName != ".")
+                {
+                    var Chain = FAT.GetClusterChain(Entry.FirstCluster);
+                    ShowDirectory(FatPartition.ReadDirectory(FAT.ReadClusters(Chain, FATStream)), FAT, FATStream, Parent + "\\" + Entry.FullName);
+                }
+            }
         }
 
         private static void ShowMapUnscaled(ClusterStatus[] Map)

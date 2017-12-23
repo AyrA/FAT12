@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -28,7 +29,7 @@ namespace FAT12
         private ExtendedBiosParameterBlock _extendedBiosParameters;
         private byte[] _bootCode;
         private byte[] _bootSectorSignature;
-        private ClusterStatus[] _clusterMap;
+        private ClusterEntry[] _clusterMap;
         private FatDirectoryEntry[] _rootDirectory;
 
         public byte[] BootJumpInstructions
@@ -99,11 +100,11 @@ namespace FAT12
                 _extendedBiosParameters = value;
             }
         }
-        public ClusterStatus[] ClusterMap
+        public ClusterEntry[] ClusterMap
         {
             get
             {
-                return (ClusterStatus[])_clusterMap.Clone();
+                return (ClusterEntry[])_clusterMap.Clone();
             }
             set
             {
@@ -115,7 +116,7 @@ namespace FAT12
                 {
                     throw new FormatException($"Cluster map must have {_clusterMap.Length} entries");
                 }
-                _clusterMap = (ClusterStatus[])value.Clone();
+                _clusterMap = (ClusterEntry[])value.Clone();
             }
         }
         public FatDirectoryEntry[] RootDirectory
@@ -155,7 +156,7 @@ namespace FAT12
                 {
                     using (var MR = new BinaryReader(MS))
                     {
-                        _clusterMap = new ClusterStatus[_biosParameters.BytesPerSector * _biosParameters.SectorsPerFat / 3];
+                        _clusterMap = new ClusterEntry[_biosParameters.BytesPerSector * _biosParameters.SectorsPerFat / 3];
                         for (var i = 0; i < _clusterMap.Length; i += 2)
                         {
                             var Clusters = MR.ReadBytes(3);
@@ -170,10 +171,11 @@ namespace FAT12
                             ushort Cluster1 = (ushort)(Clusters[0] + ((Clusters[1] >> 4) * 256));
                             ushort Cluster2 = (ushort)((Clusters[2] << 4) + (Clusters[1] & 0xF));
 
-                            _clusterMap[i] = GetFat12Status(Cluster1);
-                            _clusterMap[i + 1] = GetFat12Status(Cluster2);
+                            _clusterMap[i] = new ClusterEntry(Cluster1);
+                            _clusterMap[i + 1] = new ClusterEntry(Cluster2);
                         }
-                        _clusterMap[0] = _clusterMap[1] = ClusterStatus.Reserved;
+                        //Hardcode first two clusters to "reserved"
+                        _clusterMap[0].Status = _clusterMap[1].Status = ClusterStatus.Reserved;
                     }
                 }
                 //Skip all other FAT tables
@@ -182,30 +184,74 @@ namespace FAT12
                     BR.ReadBytes(_biosParameters.BytesPerSector * _biosParameters.SectorsPerFat);
                 }
                 //Root Directory
-                _rootDirectory = Enumerable.Range(0, _biosParameters.NumberOfRootEntries).Select(m => new FatDirectoryEntry(BR.ReadBytes(FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY))).ToArray();
+                _rootDirectory = ReadDirectory(BR.ReadBytes(FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY * _biosParameters.NumberOfRootEntries));
+                //Enumerable.Range(0, _biosParameters.NumberOfRootEntries).Select(m => new FatDirectoryEntry(BR.ReadBytes(FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY))).ToArray();
             }
         }
 
-        private ClusterStatus GetFat12Status(ushort u)
+        public byte[] ReadClusters(ushort[] ClusterChain, Stream FATStream)
         {
-            if (u == 0)
+            int BlockSize = _biosParameters.SectorsPerCluster * _biosParameters.BytesPerSector;
+            byte[] Data = new byte[BlockSize];
+            using (var MS = new MemoryStream())
             {
-                return ClusterStatus.Empty;
+                foreach (var Cluster in ClusterChain)
+                {
+                    FATStream.Seek(
+                        //Specified cluster
+                        BlockSize * (Cluster - 1) +
+                        //FAT Tables Offset
+                        _biosParameters.NumberOfFatTables * _biosParameters.SectorsPerFat * _biosParameters.BytesPerSector +
+                        //Root Directory Offset
+                        _biosParameters.NumberOfRootEntries * FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY,
+                        SeekOrigin.Begin);
+                    FATStream.Read(Data, 0, Data.Length);
+                    MS.Write(Data, 0, Data.Length);
+                }
+                return MS.ToArray();
             }
-            if (u == 1 || u==0xFF6)
+        }
+
+        public static FatDirectoryEntry[] ReadDirectory(byte[] RawDirectory)
+        {
+            using (var MS = new MemoryStream(RawDirectory, false))
             {
-                return ClusterStatus.Reserved;
+                using (var BR = new BinaryReader(MS))
+                {
+                    return Enumerable.Range(0, RawDirectory.Length / FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY).Select(m => new FatDirectoryEntry(BR.ReadBytes(FatReader.FAT_BYTES_PER_DIRECTORY_ENTRY))).ToArray();
+                }
             }
-            if (u <= 0xFEF || u==0xFF0)
+        }
+
+        public ushort[] GetClusterChain(ushort Start)
+        {
+            if (Start >= _clusterMap.Length)
             {
-                return ClusterStatus.Occupied;
+                throw new ArgumentOutOfRangeException("Start", "Start must be smaller than ClusterMap.Length");
             }
-            if (u == 0xFF7)
+            if (_clusterMap[Start].Status == ClusterStatus.Reserved)
             {
-                return ClusterStatus.Damaged;
+                throw new ArgumentException("Start refers to reserved cluster");
             }
-            //End of file marker otherwise
-            return ClusterStatus.EOF;
+            if (_clusterMap[Start].Status == ClusterStatus.Damaged)
+            {
+                throw new ArgumentException("Start refers to damaged cluster");
+            }
+            if (_clusterMap[Start].Status == ClusterStatus.Empty)
+            {
+                throw new ArgumentException("Start refers to empty cluster");
+            }
+            List<ushort> L = new List<ushort>();
+
+            L.Add(Start);
+            var Current = Start;
+            while (_clusterMap[Current].Status == ClusterStatus.Occupied)
+            {
+                Current = _clusterMap[Current].RawValue;
+                L.Add(Current);
+            }
+
+            return L.ToArray();
         }
     }
 }
