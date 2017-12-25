@@ -5,14 +5,47 @@ using System.Text;
 
 namespace FAT12
 {
+    /// <summary>
+    /// Entry in the FAT Directory Table
+    /// </summary>
+    /// <remarks>This can't yet handle long file names</remarks>
     public class FatDirectoryEntry
     {
+        /// <summary>
+        /// 8 char File Name
+        /// </summary>
+        /// <remarks>This is padded with spaces at the end if needed.</remarks>
         private string _fileName;
+        /// <summary>
+        /// 8 char Extension
+        /// </summary>
+        /// <remarks>
+        /// This is padded with spaces at the end if needed.
+        /// Files/directories without extension have this set to 3 spaces
+        /// </remarks>
         private string _fileExt;
+        /// <summary>
+        /// Creation timestamp
+        /// </summary>
+        /// <remarks>Timestamp is only accurate to 2 seconds</remarks>
         private ushort _createTime;
+        /// <summary>
+        /// Creation Date
+        /// </summary>
         private ushort _createDate;
+        /// <summary>
+        /// Last Access Date
+        /// </summary>
+        /// <remarks>This will almost always not be set for floppy disk images</remarks>
         private ushort _accessDate;
+        /// <summary>
+        /// Modification Date
+        /// </summary>
         private ushort _modifyDate;
+        /// <summary>
+        /// Modification Time
+        /// </summary>
+        /// <remarks>Timestamp is only accurate to 2 seconds</remarks>
         private ushort _modifyTime;
 
         /// <summary>
@@ -192,6 +225,13 @@ namespace FAT12
         /// </summary>
         public ushort ExtendedAttributes;
 
+        /// <summary>
+        /// Creates a Fat Directory Entry from a byte array
+        /// </summary>
+        /// <param name="Entry">
+        /// Directory Emtry.
+        /// Must be <see cref="FatConstants.FAT_BYTES_PER_DIRECTORY_ENTRY"/> bytes in length.
+        /// </param>
         public FatDirectoryEntry(byte[] Entry)
         {
             if (Entry == null)
@@ -269,6 +309,13 @@ namespace FAT12
         }
     }
 
+    /// <summary>
+    /// Attributes for an Entry
+    /// </summary>
+    /// <remarks>
+    /// While possible to set any combination of attributes,
+    /// not all make sense
+    /// </remarks>
     [Flags]
     public enum DirectoryEntryAttribute : byte
     {
@@ -311,6 +358,12 @@ namespace FAT12
         Reserved = Archive << 1
     }
 
+    /// <summary>
+    /// Status of a Directory Entry
+    /// </summary>
+    /// <remarks>This is detected from the first character in the file name
+    /// (apart from <see cref="InUse"/>)
+    /// </remarks>
     public enum DirectoryEntryStatus : byte
     {
         /// <summary>
