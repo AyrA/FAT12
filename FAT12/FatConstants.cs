@@ -1,5 +1,9 @@
 ﻿namespace FAT12
 {
+    /// <summary>
+    /// Holds various constants for the FAT File system
+    /// </summary>
+    /// <remarks>This is focused on FAT12 with 1.44 MB 3.5" floppy disks</remarks>
     public static class FatConstants
     {
         /// <summary>
