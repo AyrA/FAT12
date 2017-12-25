@@ -302,6 +302,32 @@ namespace FAT12
         }
 
         /// <summary>
+        /// Reads a File from a Directory Entry
+        /// </summary>
+        /// <param name="Entry">Directory Entry</param>
+        /// <param name="FatStream">FAT Image Stream</param>
+        /// <returns>File data</returns>
+        /// <remarks>Only works for Files and Directories</remarks>
+        public byte[] ReadFile(FatDirectoryEntry Entry, Stream FatStream)
+        {
+            //Bitmask of all unsupported flags
+            var InvalidFlags =
+                DirectoryEntryAttribute.Device |
+                DirectoryEntryAttribute.Reserved |
+                DirectoryEntryAttribute.VolumeLabel;
+            //Masking with unsupported flags should return "Normal" (0)
+            if ((Entry.Attributes & InvalidFlags) != DirectoryEntryAttribute.Normal)
+            {
+                throw new ArgumentException("This function only supports files and directories");
+            }
+            if (Entry.FileSize > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException("Entry.FileSize is way too large for FAT12. This hints at a corrupted file entry.");
+            }
+            return ReadFile(GetClusterChain(Entry.FirstCluster), (int)Entry.FileSize, FatStream);
+        }
+
+        /// <summary>
         /// Reads a FAT Directory from a byte Array
         /// </summary>
         /// <param name="RawDirectory">FAT Directory Data</param>
