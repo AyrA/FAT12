@@ -8,19 +8,49 @@ namespace FAT12
 {
     class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Main Entry Point
+        /// </summary>
+        /// <param name="args">Don't care (Yet)</param>
+        /// <returns>0 on success</returns>
+        static int Main(string[] args)
         {
-            using (var FS = File.OpenRead(@"S:\Backup\Floppy_Images\Eliza.ima"))
+            const int RET_OK = 0;
+            const int RET_FAIL = 1;
+            const string IMAGE = @"S:\Backup\Floppy_Images\Eliza.ima";
+
+            if (!File.Exists(IMAGE))
             {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.Error.WriteLine("The Image {0} was not found. Change Program.cs to fit your needs.", IMAGE);
+                Console.ResetColor();
+                return RET_FAIL;
+            }
+            using (var FS = File.OpenRead(IMAGE))
+            {
+                //Read File as FAT12 Image
                 var FAT = new FatPartition(FS);
 
+                //Show Map
                 ShowMapUnscaled(FAT.ClusterMap.Select(m => m.Status).ToArray());
 
-                var chain = FAT.GetClusterChain(178);
-                var Data = Encoding.Default.GetString(FAT.ReadFile(chain, 336710, FS));
-                Console.WriteLine(Data);
-
+                //If you want to test this with your own image, change the name to a valid root directory entry.
+                var Entry = FAT.RootDirectory.FirstOrDefault(m => m.FullName.ToLower() == "eliza.dat");
+                if (Entry != null)
+                {
+                    var Data = Encoding.Default.GetString(FAT.ReadFile(Entry, FS));
+                    Console.Error.WriteLine(Data);
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.Error.WriteLine("Specified file not found in the image. Change Program.cs to fit your needs.");
+                    Console.ResetColor();
+                    return RET_FAIL;
+                }
+                //Show FAT Directory recursively
                 ShowDirectory(FAT.RootDirectory, FAT, FS);
+                return RET_OK;
             }
 #if DEBUG
             Console.Error.WriteLine("#END");
@@ -29,20 +59,38 @@ namespace FAT12
 #endif
         }
 
+        /// <summary>
+        /// Shows a Directory Entry recursively
+        /// </summary>
+        /// <param name="Entries">Directory Entries</param>
+        /// <param name="FAT">FAT Partition of given Entries</param>
+        /// <param name="FATStream">Stream for given FAT Partition</param>
+        /// <param name="Parent">Parent Directory Path</param>
         private static void ShowDirectory(FatDirectoryEntry[] Entries, FatPartition FAT, Stream FATStream, string Parent = "")
         {
+            if (Entries == null)
+            {
+                Entries = FAT.RootDirectory;
+            }
             Console.WriteLine("Directory: {0}", string.IsNullOrEmpty(Parent) ? "\\" : Parent);
             foreach (var Entry in Entries.Where(m => m.EntryStatus == DirectoryEntryStatus.InUse))
             {
                 Console.WriteLine("NAME={0,-12} TYPE={1,-15} SIZE={2,-10} START={3}", Entry.FullName, Entry.Attributes, Entry.FileSize, Entry.FirstCluster);
+                //Recursively enter directories if the name is not "parent" or "current"
                 if (Entry.Attributes.HasFlag(DirectoryEntryAttribute.Directory) && Entry.FullName != ".." && Entry.FullName != ".")
                 {
-                    var Chain = FAT.GetClusterChain(Entry.FirstCluster);
-                    ShowDirectory(FatPartition.ReadDirectory(FAT.ReadClusters(Chain, FATStream)), FAT, FATStream, Parent + "\\" + Entry.FullName);
+                    //- Reads cluster chain of given Directory
+                    //- Reads directory from given Chain
+                    //- Recursively enters function to show directory listing
+                    ShowDirectory(FatPartition.ReadDirectory(FAT.ReadClusters(FAT.GetClusterChain(Entry.FirstCluster), FATStream)), FAT, FATStream, Parent + "\\" + Entry.FullName);
                 }
             }
         }
 
+        /// <summary>
+        /// Draws the cluster map 1:1 to the console
+        /// </summary>
+        /// <param name="Map">Cluster Map</param>
         private static void ShowMapUnscaled(ClusterStatus[] Map)
         {
             var Colors = Map.Select(m => ToConsoleColor(m)).ToArray();
@@ -53,8 +101,16 @@ namespace FAT12
                 Console.Write(Chars[i]);
             }
             Console.WriteLine();
+            Console.ResetColor();
         }
 
+        /// <summary>
+        /// Draws the Cluster Map into a given rectangular Area
+        /// </summary>
+        /// <param name="Map">Cluster Map</param>
+        /// <param name="Width">Area Width</param>
+        /// <param name="Height">Area Height</param>
+        /// <remarks>This will upscale as well as downscale</remarks>
         private static void ShowMap(ClusterStatus[] Map, int Width = -1, int Height = -1)
         {
             if (Width <= 0)
@@ -82,6 +138,13 @@ namespace FAT12
             Console.ResetColor();
         }
 
+        /// <summary>
+        /// Draws the Cluster Map into an Image File
+        /// </summary>
+        /// <param name="Map">Cluster Map</param>
+        /// <param name="PixelSize">Pixel size of each Map entry</param>
+        /// <returns>Image containing Cluster Map</returns>
+        /// <remarks>This will make the image into a Square. Unused pixels are black.</remarks>
         private static Image DrawMap(ClusterStatus[] Map, int PixelSize = 1)
         {
             //Get square that definitely can hold the entire map
@@ -130,6 +193,11 @@ namespace FAT12
             }
         }
 
+        /// <summary>
+        /// Translates a Cluster Status Value into a character
+        /// </summary>
+        /// <param name="C">Cluster Status</param>
+        /// <returns>Character</returns>
         private static char ToConsoleChar(ClusterStatus C)
         {
             switch (C)
@@ -146,6 +214,11 @@ namespace FAT12
             return '.';
         }
 
+        /// <summary>
+        /// Translates a Cluster Status Value into a Console color
+        /// </summary>
+        /// <param name="C">Cluster Status</param>
+        /// <returns>Console Color Value</returns>
         private static ConsoleColor ToConsoleColor(ClusterStatus C)
         {
             switch (C)
@@ -162,6 +235,11 @@ namespace FAT12
             return ConsoleColor.White;
         }
 
+        /// <summary>
+        /// Translates a Cluster Status Value into an RGB bitmap Color
+        /// </summary>
+        /// <param name="C">Cluster Status</param>
+        /// <returns>Bitmap Color Value</returns>
         private static Color ToBitmapColor(ClusterStatus C)
         {
             switch (C)
