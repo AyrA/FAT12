@@ -44,6 +44,12 @@ namespace FAT12
         /// <remarks>Usually the name of the File system. Some faulty applications depend on this Value.</remarks>
         public string SystemID;
 
+        /// <summary>
+        /// Initializes a new ExtendedBiosParameterBlock
+        /// </summary>
+        /// <param name="S">
+        /// Stream that is positioned at the start of the Extended Bios Parameter Block
+        /// </param>
         public ExtendedBiosParameterBlock(Stream S)
         {
             using (var BR = new BinaryReader(S, Encoding.Default, true))
