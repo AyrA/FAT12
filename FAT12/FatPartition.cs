@@ -6,8 +6,14 @@ using System.Text;
 
 namespace FAT12
 {
+    /// <summary>
+    /// Represents a FAT12 Partition
+    /// </summary>
     public class FatPartition
     {
+        /// <summary>
+        /// Boot Jump instructions found by default on most partitions
+        /// </summary>
         public static byte[] DefaultBootJumpInstructions
         {
             get
@@ -15,6 +21,10 @@ namespace FAT12
                 return new byte[] { 0xEB, 0x3C, 0x90 };
             }
         }
+
+        /// <summary>
+        /// OEM Name found often on FAT12 Disk images
+        /// </summary>
         public static string DefaultOemName
         {
             get
@@ -23,15 +33,47 @@ namespace FAT12
             }
         }
 
+        /// <summary>
+        /// Boot Jump Instruction of the image
+        /// </summary>
         private byte[] _bootJumpInstructions;
+        /// <summary>
+        /// OEM Name
+        /// </summary>
         private string _oemName;
+        /// <summary>
+        /// BIOS Parameters
+        /// </summary>
         private BiosParameterBlock _biosParameters;
+        /// <summary>
+        /// Extended BIOS Parameters
+        /// </summary>
         private ExtendedBiosParameterBlock _extendedBiosParameters;
+        /// <summary>
+        /// Code for Boot Routine
+        /// </summary>
         private byte[] _bootCode;
+        /// <summary>
+        /// Signature of the Boot Sector
+        /// </summary>
+        /// <remarks>
+        /// This is almost always {0x55,0xAA} and if it is not,
+        /// many computers will ignore it in the boot order.
+        /// </remarks>
         private byte[] _bootSectorSignature;
+        /// <summary>
+        /// Cluster Map
+        /// </summary>
         private ClusterEntry[] _clusterMap;
+        /// <summary>
+        /// FAT Root Directory
+        /// </summary>
         private FatDirectoryEntry[] _rootDirectory;
 
+        /// <summary>
+        /// Boot Jump Instructions found in Image
+        /// </summary>
+        /// <remarks>Always 3 Bytes</remarks>
         public byte[] BootJumpInstructions
         {
             get
@@ -51,6 +93,14 @@ namespace FAT12
                 _bootJumpInstructions = (byte[])value.Clone();
             }
         }
+        /// <summary>
+        /// OEM Name. Meant for the OS/application to set freely
+        /// </summary>
+        /// <remarks>
+        /// Always 8 bytes.
+        /// Some (faulty) applications need this to be a certain value.
+        /// Often this is <see cref="DefaultOemName"/>.
+        /// </remarks>
         public string OemName
         {
             get
@@ -70,6 +120,9 @@ namespace FAT12
                 _oemName = value.PadRight(8);
             }
         }
+        /// <summary>
+        /// Values of the BIOS Parameter Block
+        /// </summary>
         public BiosParameterBlock BiosParameters
         {
             get
@@ -85,6 +138,9 @@ namespace FAT12
                 _biosParameters = value;
             }
         }
+        /// <summary>
+        /// Values of the Extended BIOS Parameter Block
+        /// </summary>
         public ExtendedBiosParameterBlock ExtendedBiosParameters
         {
             get
@@ -100,6 +156,9 @@ namespace FAT12
                 _extendedBiosParameters = value;
             }
         }
+        /// <summary>
+        /// FAT12 Cluster Map
+        /// </summary>
         public ClusterEntry[] ClusterMap
         {
             get
@@ -119,6 +178,9 @@ namespace FAT12
                 _clusterMap = (ClusterEntry[])value.Clone();
             }
         }
+        /// <summary>
+        /// FAT Root Directory
+        /// </summary>
         public FatDirectoryEntry[] RootDirectory
         {
             get
