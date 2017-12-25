@@ -201,6 +201,10 @@ namespace FAT12
             }
         }
 
+        /// <summary>
+        /// Reads a Stream into a FAT12 Partition
+        /// </summary>
+        /// <param name="S">Stream Positioned at the Boot Sector</param>
         public FatPartition(Stream S)
         {
             using (var BR = new BinaryReader(S, Encoding.Default, true))
@@ -251,6 +255,11 @@ namespace FAT12
             }
         }
 
+        /// <summary>
+        /// Calculates the Physical Stream Offset of a given Cluster
+        /// </summary>
+        /// <param name="Cluster">Cluster Number</param>
+        /// <returns>Stream Offset in Bytes</returns>
         public int CalculateOffset(ushort Cluster)
         {
             return _biosParameters.SectorsPerCluster * _biosParameters.BytesPerSector * (Cluster - 1) +
@@ -258,6 +267,12 @@ namespace FAT12
                 _biosParameters.NumberOfRootEntries * FatConstants.FAT_BYTES_PER_DIRECTORY_ENTRY;
         }
 
+        /// <summary>
+        /// Reads a cluster chain into one contiguous data block
+        /// </summary>
+        /// <param name="ClusterChain">Cluster Chain</param>
+        /// <param name="FATStream">Stream to read From</param>
+        /// <returns>Cluster data</returns>
         public byte[] ReadClusters(ushort[] ClusterChain, Stream FATStream)
         {
             int BlockSize = _biosParameters.SectorsPerCluster * _biosParameters.BytesPerSector;
@@ -274,11 +289,23 @@ namespace FAT12
             }
         }
 
+        /// <summary>
+        /// Reads a cluster chain of a file
+        /// </summary>
+        /// <param name="ClusterChain">Cluster Chain</param>
+        /// <param name="FileSize">File Size in bytes</param>
+        /// <param name="FATStream">Stream to read from</param>
+        /// <returns>File content</returns>
         public byte[] ReadFile(ushort[] ClusterChain, int FileSize, Stream FATStream)
         {
             return ReadClusters(ClusterChain, FATStream).Take(FileSize).ToArray();
         }
 
+        /// <summary>
+        /// Reads a FAT Directory from a byte Array
+        /// </summary>
+        /// <param name="RawDirectory">FAT Directory Data</param>
+        /// <returns>FAT Directory Entries</returns>
         public static FatDirectoryEntry[] ReadDirectory(byte[] RawDirectory)
         {
             using (var MS = new MemoryStream(RawDirectory, false))
@@ -290,6 +317,11 @@ namespace FAT12
             }
         }
 
+        /// <summary>
+        /// Gets a Cluster chain given a start Cluster
+        /// </summary>
+        /// <param name="Start">Cluster to start reading</param>
+        /// <returns>Cluster chain</returns>
         public ushort[] GetClusterChain(ushort Start)
         {
             if (Start >= _clusterMap.Length)
