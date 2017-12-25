@@ -72,6 +72,10 @@ namespace FAT12
         /// </summary>
         public uint LargeSectors;
 
+        /// <summary>
+        /// Initializes a new BiosParameterBlock
+        /// </summary>
+        /// <param name="S">Stream that is positioned at the start of the Bios Parameter Block</param>
         public BiosParameterBlock(Stream S)
         {
             using (var BR = new BinaryReader(S, Encoding.Default, true))
