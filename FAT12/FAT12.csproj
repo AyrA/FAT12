@@ -44,7 +44,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BiosParameterBlock.cs" />
-    <Compile Include="Cluster.cs" />
     <Compile Include="ClusterEntry.cs" />
     <Compile Include="ClusterStatus.cs" />
     <Compile Include="ExtendedBiosParameterBlock.cs" />
